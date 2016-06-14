@@ -13,6 +13,6 @@ __networkid__: this is found from the "getNetworkList" part of the API
 
 ## Files
 
-__merakiapi.js__: Main api file
+__merakiapi.js__: Main api file.
 __test.js__: Demo functions to test out functionality
 
