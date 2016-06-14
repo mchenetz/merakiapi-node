@@ -91,4 +91,14 @@ exports.getNonMerakiVpnPeers = (apikey,organizationid, response) => {
 exports.getAdmins = (apikey,organizationid, response) => {
     getPath(apikey, util.format('/api/v0/organizations/%s/admins', organizationid), response);
 };
+exports.getNetworkByName = (apikey, organizationid, name, response) => {
+    getPath(apikey, util.format('/api/v0/organizations/%s/networks', organizationid), (data) => {
+        for(i=0;i < data.length; i++){
+            if (data[i]['name']==name) {
+                response(data[i]['id'].toString());
+            }
+        }
+    });
+};
+
 
