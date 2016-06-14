@@ -11,3 +11,8 @@ __apikey__: This is found in the profile section of your Meraki cloud once you h
 __organizationid__: This is found from the following by using the "getOrg" part of the API  
 __networkid__: this is found from the "getNetworkList" part of the API  
 
+## Files
+
+__merakiapi.js__: Main api file
+__test.js__: Demo functions to test out functionality
+
