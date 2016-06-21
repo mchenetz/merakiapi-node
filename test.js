@@ -17,10 +17,20 @@ merakiapi.getOrg(apikey, (data) => {
 });
 
 //Example below gets the Meraki network by the name, 'Home' and then calls the inner function, 'getNetworkDevices'.
-// The network id is passed through the response object.
-
+//The network id is passed through the response object.
 merakiapi.getNetworkByName(apikey,orgid,'Home', (response) => {
     merakiapi.getNetworkDevices(apikey,response, (data) => {
         console.log(data);
     });
 });
+
+//Example below gets the Meraki network by the name, 'Home' and then calls the inner function, 'addVlan'
+//the format of addVlan is apikey, networkid, vlanid, vlanname, mxid, subnet
+
+// merakiapi.getNetworkByName(apikey,orgid,'Home', (response) => {
+//     merakiapi.addVlan(apikey,response, '6', 'TestVlan2','192.168.13.1','192.168.13.0/24',(data) => {
+//         console.log(data);
+//     });
+// });
+
+
