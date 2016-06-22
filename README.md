@@ -1,7 +1,6 @@
 # merakiapi-node
 This is a nodejs Meraki API.
 
-This API currently supports, "Get" functionality. More functionality will be added shortly.
 
 ##Instructions
 This API has been created for Node.js with use with the Meraki cloud.
