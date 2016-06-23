@@ -838,7 +838,7 @@ exports.addNetwork = (apikey, organizatonid,name, nettype, tags, tz, response ) 
             {
                 response(util.format('A network with the name %s already exists in the organization',name));
             }
-            else if (status_code < 400 || status_code > 500 ){
+            else if (status_code > 400 || status_code < 500 ){
             response('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: ');
             }
 
