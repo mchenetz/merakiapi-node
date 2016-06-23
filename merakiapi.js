@@ -639,6 +639,7 @@ function _getPath(apikey, getpath, response ) {
 }
 
 function _postPath (apikey, postdata, postpath, response){
+
     postOptions.path = postpath;
     postOptions.headers = {
         'x-cisco-meraki-api-key': apikey,
@@ -646,10 +647,11 @@ function _postPath (apikey, postdata, postpath, response){
     };
     req = https.request(postOptions,(res) => {
         var body = '';
-        console.log(res.statusCode);
+
+
         if (res.statusCode > 300 && res.statusCode < 400) {
-            console.log ('302 encountered');
             postOptions.hostname = url.parse(res.headers.location).host;
+
             _postPath(apikey, postdata, postpath, response);
         } else {
             res.on('data', (d) => {
@@ -658,15 +660,16 @@ function _postPath (apikey, postdata, postpath, response){
             });
             res.on('end', () => {
                 //process.stdout.write(d);
-                response('body:' + body);
+
+                response(res.statusCode);
             });
         }
     }).on('error', (e) => {
         console.error('Request error: '+e);
     });
-    console.log(postdata);
     req.write(JSON.stringify(postdata));
-    response('End result: ' + req.end());
+    req.end();
+    response();
 }
 
 function _delPath (apikey, postdata, path, response){
@@ -817,7 +820,6 @@ exports.addNetwork = (apikey, organizatonid,name, nettype, tags, tz, response ) 
     for (i=0; i < tzlist.length; i++){
         if (validtz == false && tz.toString() == tzlist[i]){
             validtz = true;
-            console.log('validtz is true');
             break;
         } else {
             validtz = false;
@@ -828,6 +830,19 @@ exports.addNetwork = (apikey, organizatonid,name, nettype, tags, tz, response ) 
     } else {
 
         path = util.format('/api/v0/organizations/%s/networks', organizatonid);
-        _postPath(apikey, postdata, path, response);
+        _postPath(apikey, postdata, path, (status_code) => {
+            if (status_code == 201) {
+                response(util.format('Added Network %s to Organization', name));
+            }
+            else if (status_code == 400)
+            {
+                response(util.format('A network with the name %s already exists in the organization',name));
+            }
+            else if (status_code < 400 || status_code > 500 ){
+            response('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: ');
+            }
+
+
+        });
     }
 };
