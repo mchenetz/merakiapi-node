@@ -1,11 +1,12 @@
 var merakiapi = require('./merakiapi.js');
 //Change below values to actual apikey and orgid.
+// If using Webstorm then you can add apikey and orgid to the environment variables.
 // example:
 // apikey = '35635643643563634634'
 // orgid = 12345'
 
-apikey = process.env.apikey;
-orgid = process.env.orgid;
+apikey = process.env.apikey || '[REPLACE WITH APIKEY]';
+orgid = process.env.orgid || '[REPLACE WITH ORGID]';
 
 //The below function will return your orgid.
 
@@ -37,7 +38,18 @@ orgid = process.env.orgid;
 //     console.log(response);
 // });
 
-merakiapi.addNetwork(apikey,orgid, 'testnet2', 'wireless', 'test', 'America/New_York', (response) => {
-    console.log(response);
-});
+// merakiapi.addNetwork(apikey,orgid, 'testnet2', 'wireless', 'test', 'America/New_York', (response) => {
+//     console.log(response);
+// });
+
+//Meraki getAdmins example:
+//merakiapi.getAdmins(apikey,orgid, (response) => {console.log(response); });
+
+//Add Admin example below:
+// if you need to associate with tags or networks then you must format those fields as a list in brackets
+// example: merakiapi.addAdmin(apikey, orgid, 'test@test.net', 'test user','full',['tag'],['full'],['network'],['full'], (response) => {}
+
+//merakiapi.addAdmin(apikey, orgid, 'test@test.net', 'test user','full','','','','', (response) => {
+//   console.log(response);
+//});
 

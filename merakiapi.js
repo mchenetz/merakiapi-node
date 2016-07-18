@@ -733,6 +733,9 @@ function _putPath (apikey, postdata, path, response){
     response(req.end());
 }
 
+exports.returnArray = () => {
+    console.log(arguments);
+};
 exports.getOrg = (apikey, response) => {
     _getPath(apikey, '/api/v0/organizations', response)
 };
@@ -805,10 +808,28 @@ exports.addVlan = (apikey, networkid, vlanid, vlanname, mxip, subnetip, response
         'subnet': subnetip
     };
 
-    path = util.format('/api/v0/networks/%s/vlans', networkid);
-    _postPath(apikey, data, path, response);
+    var path = util.format('/api/v0/networks/%s/vlans', networkid);
+    _postPath(apikey, data, path, (status_code) => {
+        if (status_code == 201) {
+            response(util.format('Added VLAN %s to MX', vlanid.toString()));
+            return;
+        }
+        else if (status_code == 400) {
+            response('Network is bound to a template - Unable to delete VLAN');
+            return;
+        }
+        else if (status_code > 400 || status_code <= 500) {
+            print(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s',statuscode.toString()));
+            return;
+        }
+        else {
+            response(statuscode);
+            return;
+        }
+
+    });
 };
-exports.addNetwork = (apikey, organizatonid,name, nettype, tags, tz, response ) => {
+exports.addNetwork = (apikey, organizationid,name, nettype, tags, tz, response ) => {
     var path = '';
     var validtz = false;
     postdata = {
@@ -829,7 +850,7 @@ exports.addNetwork = (apikey, organizatonid,name, nettype, tags, tz, response ) 
         response('Please enter a valid tz value from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones');
     } else {
 
-        path = util.format('/api/v0/organizations/%s/networks', organizatonid);
+        path = util.format('/api/v0/organizations/%s/networks', organizationid);
         _postPath(apikey, postdata, path, (status_code) => {
             if (status_code == 201) {
                 response(util.format('Added Network %s to Organization', name));
@@ -846,3 +867,95 @@ exports.addNetwork = (apikey, organizatonid,name, nettype, tags, tz, response ) 
         });
     }
 };
+
+exports.addAdmin = (apikey, organizationid, email, name, orgaccess, tags, tagaccess, networks, netaccess, response ) => {
+    posttags = [];
+    postnets = [];
+    postdata = [];
+    var path = util.format('/api/v0/organizations/%s/admins', organizationid);
+    if (orgaccess==undefined && tags==undefined && networks==undefined)
+    {
+        response("Administrator accounts must be granted access to either the Organization, Networks, or Tags");
+        return undefined;
+    } else if ( tags != undefined && tagaccess == undefined ) {
+        response("If tags are defined you must define matching access arguments.\nFor example, tags = ['tag1', 'tag2'], must have matching access arguments: tagaccess = 'full', 'read-only'");
+        return undefined;
+    } else if (tagaccess != undefined && tags == undefined) {
+        response("If tag access levels are defined you must define matching tag arguments\nFor example, tags = ['tag1', 'tag2'] must have matching access arguments: tagaccess = 'full', 'read-only'");
+        return undefined;
+    } else if (tags.length != tagaccess.length) {
+        response("The number of tags and access arguments must match.\n For example, tags = ['tag1', 'tag2'] must have matching access arguments: tagaccess = ['full', 'read-only']");
+        return undefined;
+    } else if (tags != undefined && tagaccess != undefined) {
+         for (var x in tags)
+        {
+            posttags.push({'tag': tags[x], 'access': tagaccess[x]});
+        }
+    }
+    else
+        {
+            return undefined;
+        }
+
+    if (networks != undefined && netaccess == undefined) {
+        response("If networks are defined you must define matching access arguments\nFor example networks = ['net1', 'net2'] must have matching access arguments: netaccess = 'full', 'read-only'");
+        return undefined;
+    }else if (netaccess != undefined && networks == undefined) {
+        response("If network access levels are defined you must define matching network arguments\nFor example, networks = ['net1', 'net2'] must have matching access arguments: netaccess = 'full', 'read-only'");
+        return undefined;
+    } else if (networks.length != netaccess.length) {
+        response("The number of networks and access arguments must match.\n For example, networks = ['net1', 'net2'] must have matching access arguments: netaccess = ['full', 'read-only']");
+        return undefined;
+    } else if (networks != undefined && netaccess != undefined)
+    {
+        for (var x in networks) {
+            postnets.push({'id': networks[x], 'access': netaccess[x]});
+        }
+    }
+
+    if (posttags.length == 0 && postnets.length == 0) {
+        postdata = {
+            'orgAccess': orgaccess,
+            'email': email.toString(),
+            'name': name.toString()
+        }
+    } else if (posttags.length > 0 && postnets.length == 0) {
+        postdata = {
+            'name': name.toString(),
+            'email': email.toString(),
+            'orgAccess': orgaccess,
+            'tags': posttags
+        }
+    } else if (postnets.length > 0 && posttags.length == 0) {
+        postdata = {
+            'name': name.toString(),
+            'email': email.toString(),
+            'orgAccess': orgaccess,
+            'networks': postnets
+        }
+    } else if (postnets.length > 0 && posttags.length > 0)
+    {
+        postdata = {
+            'name': name.toString(),
+            'email': email.toString(),
+            'orgAccess': orgaccess,
+            'tags': posttags,
+            'networks': postnets
+        }
+    }
+    console.log(postdata);
+    _postPath(apikey, postdata, path, (status_code) => {
+        if (status_code == 201) {
+            response(util.format('Added Administrator %s to Organization ID %s', email.toString(), organizationid.toString()));
+            return undefined;
+        } else if (status_code == 400) {
+            response('Unable to add Administrator');
+            return undefined;
+        } else if (status_code > 400 || status_code  <= 500) {
+            response(util.format( 'An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s',status_code.toString()));
+            return undefined;
+        }
+    });
+
+};
+
