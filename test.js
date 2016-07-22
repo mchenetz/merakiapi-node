@@ -34,6 +34,7 @@ orgid = process.env.orgid || '[REPLACE WITH ORGID]';
 //     });
 // });
 
+// Get Network List Example
 // merakiapi.getNetworkList(apikey,orgid,(response) => {
 //     console.log(response);
 // });
@@ -42,8 +43,8 @@ orgid = process.env.orgid || '[REPLACE WITH ORGID]';
 //     console.log(response);
 // });
 
-//Meraki getAdmins example:
-//merakiapi.getAdmins(apikey,orgid, (response) => {console.log(response); });
+// Meraki getAdmins example:
+// merakiapi.getAdmins(apikey,orgid, (response) => {console.log(response); });
 
 //Add Admin example below:
 // if you need to associate with tags or networks then you must format those fields as a list in brackets
@@ -53,3 +54,35 @@ orgid = process.env.orgid || '[REPLACE WITH ORGID]';
 //   console.log(response);
 //});
 
+//query Template Example
+// merakiapi.getTemplates(apikey, orgid, (response) => {
+//    console.log(response);
+// });
+
+// Delete Template Example
+// merakiapi.delTemplate(apikey, orgid,'N_xxxxxxxxxxxxxx',(response) => {
+//    console.log(response);
+// });
+
+//Get VLANS Example
+// merakiapi.getNetworkByName(apikey,orgid,'Home', (netid) => {
+//     merakiapi.getVlans(apikey, netid, (response) => {
+//         console.log(response);
+//     });
+// });
+
+//Update VLAN Example
+// merakiapi.updateVlan(apikey,'L_xxxxxxxxxxxx' ,'6', 'TestVlan2','192.168.15.1','192.168.15.0/24', (response) =>
+// {
+//     console.log(response);
+// });
+
+//Delete VLAN example
+// merakiapi.delVlan(apikey, 'L_xxxxxxxxxxxx','6', (response) => {
+//     console.log(response);
+// });
+
+// Delete admin Example
+// merakiapi.delAdmin(apikey, orgid, 'xxxxxxxxxxxxxxxx', (response) => {
+//     console.log(response);
+// });

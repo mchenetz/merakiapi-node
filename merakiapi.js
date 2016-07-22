@@ -606,6 +606,12 @@ var postOptions = {
     path: '',
     method: 'POST'
 };
+var delOptions = {
+    hostname: 'dashboard.meraki.com',
+    port: 443,
+    path: '',
+    method: 'DELETE'
+};
 function _getPath(apikey, getpath, response ) {
 
     getOptions.path = getpath;
@@ -672,19 +678,19 @@ function _postPath (apikey, postdata, postpath, response){
     response();
 }
 
-function _delPath (apikey, postdata, path, response){
-    options.path = path;
-    options.headers = {
+function _delPath (apikey, path, response){
+    delOptions.path = path;
+    delOptions.headers = {
         'x-cisco-meraki-api-key': apikey,
         'Content-Type': 'application/json'
     };
-    options.method = 'DELETE';
-    req = https.request(options,(res) => {
+
+    req = https.request(delOptions,(res) => {
         var body = '';
-        if (res.statusCode == 302) {
+        if (res.statusCode > 300 && res.statusCode < 400) {
             console.log ('302 encountered');
-            options.hostname = url.parse(res.headers.location).host.trim();
-            _postPath(apikey, data, path, response);
+            delOptions.hostname = url.parse(res.headers.location).host.trim();
+            _delPath(apikey, path, response);
         } else {
             res.on('data', (d) => {
                 //process.stdout.write(d);
@@ -692,30 +698,31 @@ function _delPath (apikey, postdata, path, response){
             });
             res.on('end', () => {
                 //process.stdout.write(d);
-                response(JSON.parse(body));
+                response(res.statusCode);
             });
         }
     }).on('error', (e) => {
         console.error(e);
     });
-    req.write(JSON.stringify(postdata));
-    response(req.end());
+    req.end();
 }
 
-function _putPath (apikey, postdata, path, response){
-    options.path = path;
-    options.headers = {
+function _putPath (apikey, putdata, putpath, response){
+
+    postOptions.path = putpath;
+    postOptions.headers = {
         'x-cisco-meraki-api-key': apikey,
         'Content-Type': 'application/json'
     };
-    options.method = 'PUT';
-
-    req = https.request(options,(res) => {
+    postOptions.method = 'PUT';
+    req = https.request(postOptions,(res) => {
         var body = '';
-        if (res.statusCode == 302) {
-            console.log ('302 encountered');
-            options.hostname = url.parse(res.headers.location).host;
-            _postPath(apikey, data, path, response);
+
+
+        if (res.statusCode > 300 && res.statusCode < 400) {
+            postOptions.hostname = url.parse(res.headers.location).host;
+
+            _putPath(apikey, putdata, putpath, response);
         } else {
             res.on('data', (d) => {
                 //process.stdout.write(d);
@@ -723,19 +730,18 @@ function _putPath (apikey, postdata, path, response){
             });
             res.on('end', () => {
                 //process.stdout.write(d);
-                response(JSON.parse(body));
+
+                response(res.statusCode);
             });
         }
     }).on('error', (e) => {
-        console.error(e);
+        console.error('Request error: '+e);
     });
-    req.write(JSON.stringify(postdata));
-    response(req.end());
+    req.write(JSON.stringify(putdata));
+    req.end();
+    response();
 }
 
-exports.returnArray = () => {
-    console.log(arguments);
-};
 exports.getOrg = (apikey, response) => {
     _getPath(apikey, '/api/v0/organizations', response)
 };
@@ -823,7 +829,7 @@ exports.addVlan = (apikey, networkid, vlanid, vlanname, mxip, subnetip, response
             return;
         }
         else {
-            response(statuscode);
+            response(status_code);
             return;
         }
 
@@ -959,3 +965,268 @@ exports.addAdmin = (apikey, organizationid, email, name, orgaccess, tags, tagacc
 
 };
 
+exports.bindToTemplate = (apikey, networkid, templateid, autobind='false', response) => {
+    var path = util.format('/api/v0/networks/%s/bind', networkid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    postdata = {
+        'configTemplateId': templateid.toString(),
+        'autobind': autobind.toString()
+    };
+    _postPath(apikey, postdata, path, (status_code) =>
+    {
+        if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        }
+        else if (status_code == '200')
+        {
+            response(util.format('Network ID %s bound to configuration template ID %s',networkid.toString(), templateid.toString()));
+        }
+    });
+};
+
+exports.unbindFromTemplate = (apikey, networkid, templateid, autobind='false', response) => {
+    var path = util.format('/api/v0/networks/%s/unbind', networkid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    postdata = {
+        'configTemplateId': templateid.toString(),
+        'autobind': autobind.toString()
+    };
+    _postPath(apikey, postdata, path, (status_code) =>
+    {
+
+        if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        }
+        else if (status_code == 200)
+        {
+            response(util.format('Network ID %s unbound from configuration template ID %s',networkid.toString(), templateid.toString()));
+        }
+    });
+};
+
+exports.delTemplate = (apikey, organizationid, templateid,  response) => {
+    var path = util.format('/api/v0/organizations/%s/configTemplates/%s', organizationid.toString(), templateid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    _delPath(apikey, path, (status_code) =>
+    {
+        console.log('status code: '+status_code);
+        if (status_code == 204)
+        {
+            response(util.format('Deleted template %s from Organization ID %s', templateid.toString(), organizationid.toString()));
+        }else if (status_code == 404)
+        {
+            response(util.format('Configuration Template ID %s cannot be found, please confirm ID', templateid.toString()));
+        }
+        else if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        }
+        else
+        {
+            response(util.format('Deletion of Template ID %s unsuccessful - HTTP Status Code: %s',templateid.toString(), status_code));
+        }
+    });
+};
+
+exports.updateVlan = (apikey, networkid, vlanid, vlanname, mxip, subnetip, response) => {
+    var path = util.format('/api/v0/networks/%s/vlans/%s', networkid.toString(), vlanid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    putdata = {
+        'name': vlanname.toString(),
+        'applianceIp': mxip.toString(),
+        'subnet': subnetip.toString()
+    };
+    _putPath(apikey, putdata, path, (status_code) => {
+        if (status_code == 200) {
+            response(util.format('VLAN %s has been updated', vlanid.toString()));
+        }
+        else if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        } else {
+            response(status_code);
+            response(putdata);
+        }
+    });
+};
+
+exports.delVlan = (apikey, networkid, vlanid, response) => {
+    var path = util.format('/api/v0/networks/%s/vlans/%s', networkid.toString(), vlanid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    _delPath(apikey,path,(status_code) => {
+        if (status_code == 204) {
+            response(util.format('Deleted VLAN %s from MX', vlanid.toString()));
+        }  else if (status_code == 400) {
+            response('Network is bound to a template - Unable to delete VLAN');
+        }  else if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        }
+    });
+};
+
+exports.delAdmin = (apikey, organizationid, adminid, response) => {
+    var path = util.format('/api/v0/organizations/%s/admins/%s', organizationid.toString(), adminid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    _delPath(apikey,path,(status_code) => {
+        if (status_code == 204) {
+            response(util.format('Deleted Admin ID %s from Organization ID %s', adminid.toString(), organizationid.toString()));
+        } else if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        }
+    });
+};
+
+exports.delNetwork = (apikey, networkid, response) => {
+    var path = util.format('/api/v0/networks/%s', networkid.toString());
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    _delPath(apikey,path,(status_code) => {
+        if (status_code == 204)
+        {
+            response(util.format('Deleted Network ID %s from Organization', networkid.toString()));
+        }else if (status_code == 404)
+        {
+            response(util.format('Network ID %s does not exist, please enter a valid network ID',networkid.toString()));
+        }
+        else if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        }
+    });
+};
+
+exports.updateAdmin = (apikey, organizationid, email, name, orgaccess, tags, tagaccess, networks, netaccess, response ) => {
+    puttags = [];
+    putnets = [];
+    putdata = [];
+    var path = util.format('/api/v0/organizations/%s/admins', organizationid);
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+
+    if (orgaccess==undefined && tags==undefined && networks==undefined && name==undefined)
+    {
+        response("Administrator account updates must include Organization, Networks, or Tags permission changes or an updated name attribute");
+        return undefined;
+    } else if ( tags != undefined && tagaccess == undefined ) {
+        response("If tags are defined you must define matching access arguments.\nFor example, tags = ['tag1', 'tag2'], must have matching access arguments: tagaccess = 'full', 'read-only'");
+        return undefined;
+    } else if (tagaccess != undefined && tags == undefined) {
+        response("If tag access levels are defined you must define matching tag arguments\nFor example, tags = ['tag1', 'tag2'] must have matching access arguments: tagaccess = 'full', 'read-only'");
+        return undefined;
+    } else if (tags.length != tagaccess.length) {
+        response("The number of tags and access arguments must match.\n For example, tags = ['tag1', 'tag2'] must have matching access arguments: tagaccess = ['full', 'read-only']");
+        return undefined;
+    } else if (tags != undefined && tagaccess != undefined) {
+        for (var x in tags)
+        {
+            puttags.push({'tag': tags[x], 'access': tagaccess[x]});
+        }
+    }
+    else
+    {
+        return undefined;
+    }
+
+    if (networks != undefined && netaccess == undefined) {
+        response("If networks are defined you must define matching access arguments\nFor example networks = ['net1', 'net2'] must have matching access arguments: netaccess = 'full', 'read-only'");
+        return undefined;
+    }else if (netaccess != undefined && networks == undefined) {
+        response("If network access levels are defined you must define matching network arguments\nFor example, networks = ['net1', 'net2'] must have matching access arguments: netaccess = 'full', 'read-only'");
+        return undefined;
+    } else if (networks.length != netaccess.length) {
+        response("The number of networks and access arguments must match.\n For example, networks = ['net1', 'net2'] must have matching access arguments: netaccess = ['full', 'read-only']");
+        return undefined;
+    } else if (networks != undefined && netaccess != undefined)
+    {
+        for (var x in networks) {
+            putnets.push({'id': networks[x], 'access': netaccess[x]});
+        }
+    }
+
+    if (puttags.length == 0 && putnets.length == 0) {
+        putdata = {
+            'orgAccess': orgaccess,
+            'email': email.toString(),
+            'name': name.toString()
+        }
+    } else if (puttags.length > 0 && putnets.length == 0) {
+        putdata = {
+            'name': name.toString(),
+            'email': email.toString(),
+            'orgAccess': orgaccess,
+            'tags': puttags
+        }
+    } else if (putnets.length > 0 && puttags.length == 0) {
+        putdata = {
+            'name': name.toString(),
+            'email': email.toString(),
+            'orgAccess': orgaccess,
+            'networks': putnets
+        }
+    } else if (putnets.length > 0 && puttags.length > 0)
+    {
+        putdata = {
+            'name': name.toString(),
+            'email': email.toString(),
+            'orgAccess': orgaccess,
+            'tags': puttags,
+            'networks': putnets
+        }
+    }
+    console.log(putdata);
+    _putPath(apikey, putdata, path, (status_code) => {
+        if (status_code == 200) {
+            response(util.format('Successfully Modified Administrator %s to Organization ID %s', email.toString(), organizationid.toString()));
+            return undefined;
+        } else if (status_code == 400) {
+            response('Unable to modify Administrator');
+            return undefined;
+        } else if (status_code > 400 || status_code  <= 500) {
+            response(util.format( 'An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s',status_code.toString()));
+            return undefined;
+        }
+    });
+
+};
+
+exports.updateNonMerakiVpn = (apikey, orgid, peername, peerip, secret, remotenets, tags) => {
+    var path = util.format('/api/v0/organizations/%s/thirdPartyVPNPeers', organizationid);
+    headers = {
+        'x-cisco-meraki-api-key': apikey.toString(),
+        'Content-Type': 'application/json'
+    };
+    putdata = {
+        'name': peername.toString(),
+        'publicIp': peerip.toString(),
+        'privateSubnets': remotenets,
+        'secret': secret.toString(),
+        'tags': tags
+    };
+    _putPath(apikey, putdata, path, (status_code) => {
+        if (status_code > 400 || status_code  <= 500) {
+            response(util.format('An error has occurred accessing the Meraki Dashboard API - HTTP Status Code: %s', status_code));
+        } else {
+            response(status_code);
+            response(JSON.parse(putdata));
+        }
+    });
+};
